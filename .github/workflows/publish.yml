@@ -23,7 +23,7 @@ jobs:
     needs: verify
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
     steps:
       - uses: actions/checkout@v4
@@ -40,3 +40,15 @@ jobs:
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Package Maven files for the GitHub Release
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          ./gradlew publishReleasePublicationToMavenLocal -PreleaseVersion="$version"
+          mkdir -p release-assets
+          cd "$HOME/.m2/repository"
+          zip -r "$GITHUB_WORKSPACE/release-assets/shared-ui-${version}-maven.zip" "com/redbull/lab/shared-ui/${version}"
+      - name: Create GitHub Release with Maven package
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: release-assets/*-maven.zip
