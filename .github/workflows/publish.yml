@@ -1,11 +1,37 @@
 name: Publish Android library
 on:
   push:
-    tags: ['v*']
+    branches: [main]
 permissions:
   contents: read
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release_needed: ${{ steps.version.outputs.release_needed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Read version and check existing release
+        id: version
+        run: |
+          version=$(sed -nE 's/.*VERSION_NAME = "([^"]+)".*/\1/p' buildSrc/src/main/kotlin/LibraryCoordinates.kt)
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid release version in LibraryCoordinates.kt: $version" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null 2>&1; then
+            echo "Release v$version already exists; skipping duplicate publication."
+            echo "release_needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "release_needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
   verify:
+    needs: prepare
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,7 +46,8 @@ jobs:
       - run: ./gradlew test assembleDebug
 
   publish:
-    needs: verify
+    needs: [prepare, verify]
+    if: needs.prepare.outputs.release_needed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -35,20 +62,23 @@ jobs:
       - name: Install Android API 35
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v4
-      - name: Publish tagged version
-        run: ./gradlew publishAllPublicationsToGitHubPackagesRepository -PreleaseVersion="${GITHUB_REF_NAME#v}"
+      - name: Publish tagged version to GitHub Packages
+        run: ./gradlew publishAllPublicationsToGitHubPackagesRepository -PreleaseVersion="${{ needs.prepare.outputs.version }}"
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Package Maven files for the GitHub Release
+        env:
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          ./gradlew publishReleasePublicationToMavenLocal -PreleaseVersion="$version"
+          ./gradlew publishReleasePublicationToMavenLocal -PreleaseVersion="$RELEASE_VERSION"
           mkdir -p release-assets
           cd "$HOME/.m2/repository"
-          zip -r "$GITHUB_WORKSPACE/release-assets/shared-ui-${version}-maven.zip" "com/redbull/lab/shared-ui/${version}"
+          zip -r "$GITHUB_WORKSPACE/release-assets/shared-ui-${RELEASE_VERSION}-maven.zip" "com/redbull/lab/shared-ui/${RELEASE_VERSION}"
       - name: Create GitHub Release with Maven package
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ needs.prepare.outputs.version }}
+          target_commitish: ${{ github.sha }}
           generate_release_notes: true
           files: release-assets/*-maven.zip
