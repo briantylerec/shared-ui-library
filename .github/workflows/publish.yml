@@ -67,18 +67,9 @@ jobs:
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Package Maven files for the GitHub Release
-        env:
-          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
-        run: |
-          ./gradlew publishReleasePublicationToMavenLocal -PreleaseVersion="$RELEASE_VERSION"
-          mkdir -p release-assets
-          cd "$HOME/.m2/repository"
-          zip -r "$GITHUB_WORKSPACE/release-assets/shared-ui-${RELEASE_VERSION}-maven.zip" "com/redbull/lab/shared-ui/${RELEASE_VERSION}"
-      - name: Create GitHub Release with Maven package
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.prepare.outputs.version }}
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
-          files: release-assets/*-maven.zip
