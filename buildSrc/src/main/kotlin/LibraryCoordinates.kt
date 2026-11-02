@@ -4,5 +4,5 @@ package com.redbull.lab.build
 object LibraryCoordinates {
     const val GROUP_ID = "com.redbull.lab"
     const val ARTIFACT_ID = "shared-ui"
-    const val VERSION_NAME = "0.1.5"
+    const val VERSION_NAME = "0.1.6"
 }
