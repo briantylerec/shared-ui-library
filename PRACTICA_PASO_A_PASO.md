@@ -1,39 +1,43 @@
 # Guía paso a paso: biblioteca Compose compartida
 
-**Objetivo.** Construir y publicar una biblioteca Android que comparte tema, tokens y componentes Compose entre varias apps.
+**Objetivo:** recorrer el proyecto UI que está en esta carpeta, respetando sus cambios actuales: tokens en archivos separados, componentes que consumen esos tokens y publicación automática desde `main`. Cada subpaso indica ruta, propósito y contenido completo del archivo.
 
-## Cómo usar esta guía
+## Antes de empezar
 
-El proyecto de esta guía es `01-shared-ui-library`. Abre una terminal en la raíz de esa carpeta. En cada paso crea las carpetas y archivos indicados (o reemplaza su contenido), pega el bloque completo y guarda. La explicación está junto al archivo. Ejecuta el comando al final de cada paso antes de continuar. Los bloques reproducen los archivos del proyecto actual.
+- Proyecto: `01-shared-ui-library`; abre una terminal en la raíz de este repositorio.
+- Requisitos: JDK 17, Android Studio y Android SDK Platform 36.
+- No reemplaces `gradlew`, `gradlew.bat` ni `gradle/wrapper/gradle-wrapper.jar`; el wrapper se actualiza editando solo `gradle-wrapper.properties`.
+- No guardes `local.properties`, claves o tokens en Git.
 
-Requisitos: JDK 17, Android Studio y Android SDK Platform 35. Usa el Gradle Wrapper que ya está en este proyecto: `./gradlew` en macOS/Linux o `gradlew.bat` en Windows. Conserva `gradlew`, `gradlew.bat` y `gradle/wrapper/gradle-wrapper.jar`; no los reemplaces con bloques de texto.
+## Paso 1. Configurar Gradle y las coordenadas Maven
 
-## Pasos
+Primero configura el proyecto independiente, su módulo `:designsystem`, el wrapper compatible, las versiones y las coordenadas del artefacto. En cada archivo compara la ruta con la raíz del proyecto y pega el contenido completo.
 
-### 1. Preparar la build Android Library
+#### Archivo `settings.gradle.kts`
 
-Configura el build independiente. settings.gradle.kts resuelve plugins y dependencias; libs.versions.toml centraliza versiones; designsystem/build.gradle.kts declara la biblioteca Android, activa Compose y configura la publicación Maven. El manifest de la biblioteca puede estar vacío.
-
-**Sigue cada archivo como un subpaso en el orden que aparece. Termina uno antes de continuar al siguiente.**
-
-#### Subpaso 1 — Crea o actualiza `settings.gradle.kts`
-
-**En el proyecto de la biblioteca Compose compartida, en la ruta `settings.gradle.kts`, crea el archivo si no existe y pega el siguiente código.**
-
-**Explicación:** Declara el nombre de esta build, los módulos y los repositorios desde donde Gradle descarga plugins y dependencias.
+**Qué hace:** Declara los repositorios de plugins y dependencias, Maven Local y el módulo Android Library.
 
 ````kotlin
-pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
-dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral(); mavenLocal() } }
+pluginManagement {
+    repositories {
+        google(); mavenCentral(); gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS);
+    repositories {
+        google();
+        mavenCentral();
+        mavenLocal()
+    }
+}
 rootProject.name = "shared-ui"
 include(":designsystem")
 ````
 
-#### Subpaso 2 — Crea o actualiza `build.gradle.kts`
+#### Archivo `build.gradle.kts`
 
-**En el proyecto de la biblioteca Compose compartida, en la ruta `build.gradle.kts`, crea el archivo si no existe y pega el siguiente código.**
-
-**Explicación:** Declara plugins y configuración comunes del build independiente.
+**Qué hace:** Declara los plugins que aplica el módulo, sin aplicarlos en la raíz.
 
 ````kotlin
 plugins {
@@ -43,40 +47,23 @@ plugins {
 }
 ````
 
-#### Archivos de coordenadas de la biblioteca
+#### Archivo `gradle/wrapper/gradle-wrapper.properties`
 
-Gradle necesita las coordenadas Maven durante la publicación. Coloca el objeto en `buildSrc` para que los scripts Gradle puedan usarlo; no lo pongas en el código Android del módulo.
+**Qué hace:** Selecciona Gradle 8.13, requerido por AGP 8.13.
 
-Crea `buildSrc/build.gradle.kts`:
-
-````kotlin
-plugins {
-    `kotlin-dsl`
-}
-
-repositories {
-    gradlePluginPortal()
-    mavenCentral()
-}
+````properties
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.13-bin.zip
+networkTimeout=10000
+validateDistributionUrl=true
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
 ````
 
-Crea `buildSrc/src/main/kotlin/LibraryCoordinates.kt`:
+#### Archivo `gradle.properties`
 
-````kotlin
-package com.redbull.lab.build
-
-object LibraryCoordinates {
-    const val GROUP_ID = "com.redbull.lab"
-    const val ARTIFACT_ID = "shared-ui"
-    const val VERSION_NAME = "0.1.0"
-}
-````
-
-#### Subpaso 3 — Crea o actualiza `gradle.properties`
-
-**En el proyecto de la biblioteca Compose compartida, en la ruta `gradle.properties`, crea el archivo si no existe y pega el siguiente código.**
-
-**Explicación:** Fija opciones de Gradle para que la compilación sea estable.
+**Qué hace:** Activa AndroidX y opciones de compilación reproducible.
 
 ````properties
 org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
@@ -84,17 +71,15 @@ android.useAndroidX=true
 kotlin.code.style=official
 ````
 
-#### Subpaso 4 — Crea o actualiza `gradle/libs.versions.toml`
+#### Archivo `gradle/libs.versions.toml`
 
-**En el proyecto de la biblioteca Compose compartida, en la ruta `gradle/libs.versions.toml`, crea el archivo si no existe y pega el siguiente código.**
-
-**Explicación:** Centraliza versiones y aliases para dependencias y plugins en formato TOML.
+**Qué hace:** Centraliza AGP, Kotlin y el Compose BOM, además de los alias de plugin y librerías.
 
 ````toml
 [versions]
-agp = "8.7.3"
-kotlin = "2.0.21"
-composeBom = "2024.10.00"
+agp = "8.13.2"
+kotlin = "2.3.21"
+composeBom = "2026.06.00"
 
 [plugins]
 android-library = { id = "com.android.library", version.ref = "agp" }
@@ -108,13 +93,43 @@ compose-material3 = { module = "androidx.compose.material3:material3" }
 compose-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 ````
 
-#### Subpaso 5 — Crea o actualiza `designsystem/build.gradle.kts`
+#### Archivo `buildSrc/build.gradle.kts`
 
-**En el proyecto de la biblioteca Compose compartida, en la ruta `designsystem/build.gradle.kts`, crea el archivo si no existe y pega el siguiente código.**
-
-**Explicación:** Configura el módulo Android de la biblioteca Compose, sus dependencias, publicación Maven y coordenadas.
+**Qué hace:** Activa Kotlin DSL en el buildSrc usado por la configuración del módulo.
 
 ````kotlin
+plugins {
+    `kotlin-dsl`
+}
+
+repositories {
+    gradlePluginPortal()
+    mavenCentral()
+}
+````
+
+#### Archivo `buildSrc/src/main/kotlin/LibraryCoordinates.kt`
+
+**Qué hace:** Define group, artifact y versión local predeterminada del paquete Maven.
+
+````kotlin
+package com.redbull.lab.build
+
+/** Maven coordinates for the shared UI library. */
+object LibraryCoordinates {
+    const val GROUP_ID = "com.redbull.lab"
+    const val ARTIFACT_ID = "shared-ui"
+    const val VERSION_NAME = "0.1.5"
+}
+````
+
+#### Archivo `designsystem/build.gradle.kts`
+
+**Qué hace:** Configura la Android Library Compose, el target Java, dependencias y publicación Maven/GitHub Packages.
+
+````kotlin
+import com.redbull.lab.build.LibraryCoordinates
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
@@ -122,11 +137,16 @@ plugins {
     `maven-publish`
 }
 
-android { namespace = "com.redbull.lab.ui"; compileSdk = 35
+android { namespace = "com.redbull.lab.ui"; compileSdk = 36
     defaultConfig { minSdk = 24 }
     publishing { singleVariant("release") { withSourcesJar() } }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
-    kotlinOptions { jvmTarget = "17" }
+
+}
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
 }
 dependencies {
     val bom = platform(libs.compose.bom)
@@ -150,33 +170,81 @@ publishing { publications { create<MavenPublication>("release") {
 afterEvaluate { publishing.publications.named<MavenPublication>("release") { from(components["release"]) } }
 ````
 
-#### Subpaso 6 — Crea o actualiza `designsystem/src/main/AndroidManifest.xml`
+#### Archivo `designsystem/src/main/AndroidManifest.xml`
 
-**En el proyecto de la biblioteca Compose compartida, en la ruta `designsystem/src/main/AndroidManifest.xml`, crea el archivo si no existe y pega el siguiente código.**
-
-**Explicación:** Declara metadatos Android del módulo; en bibliotecas no incluye una pantalla de app.
+**Qué hace:** Declara el manifest mínimo de la biblioteca.
 
 ````xml
 <manifest />
 ````
 
-**Al terminar este paso:**
+**Comprueba la configuración antes de añadir los componentes:**
 
 ```bash
-./gradlew tasks
+./gradlew projects
+./gradlew :designsystem:tasks
 ```
 
-### 2. Crear tema y componentes reutilizables
+## Paso 2. Crear los tokens del design system
 
-Los tokens viven en RedBullTheme.kt. Los componentes reciben datos, acciones y Modifier, sin conocer Retrofit ni reglas propias de Events/Explore. Así las apps comparten presentación, pero conservan su lógica.
+Los tokens mantienen colores, tamaños y textos en un lugar común. Los componentes pueden reutilizarlos sin repetir valores literales. Crea las carpetas si no existen.
 
-**Sigue cada archivo como un subpaso en el orden que aparece. Termina uno antes de continuar al siguiente.**
+#### Archivo `designsystem/src/main/java/com/redbull/lab/ui/theme/Colors.kt`
 
-#### Subpaso 7 — Crea o actualiza `designsystem/src/main/java/com/redbull/lab/ui/RedBullTheme.kt`
+**Qué hace:** Expone los colores primario y secundario de la biblioteca.
 
-**En el proyecto de la biblioteca Compose compartida, en la ruta `designsystem/src/main/java/com/redbull/lab/ui/RedBullTheme.kt`, crea el archivo si no existe y pega el siguiente código.**
+````kotlin
+package com.redbull.lab.ui.theme
 
-**Explicación:** Expone tokens visuales y el tema Compose compartido.
+import androidx.compose.ui.graphics.Color
+
+/** Shared color tokens for the Red Bull design system. */
+object Colors {
+    val Primary = Color(0xFFCC0000)
+    val Secondary = Color(0xFF202020)
+}
+````
+
+#### Archivo `designsystem/src/main/java/com/redbull/lab/ui/theme/Dimensions.kt`
+
+**Qué hace:** Centraliza espaciados que usan tarjetas y estados.
+
+````kotlin
+package com.redbull.lab.ui.theme
+
+import androidx.compose.ui.unit.dp
+
+/** Shared spacing and size tokens for the Red Bull design system. */
+object Dimensions {
+    val Dim6dp = 6.dp
+    val Dim8dp = 8.dp
+    val Dim16dp = 16.dp
+    val Dim24dp = 24.dp
+}
+````
+
+#### Archivo `designsystem/src/main/java/com/redbull/lab/ui/theme/Strings.kt`
+
+**Qué hace:** Centraliza etiquetas predeterminadas de búsqueda, carga y reintento.
+
+````kotlin
+package com.redbull.lab.ui.theme
+
+/** Shared default text labels for the design system components. */
+object Strings {
+    const val Search = "Search"
+    const val Loading = "Loading…"
+    const val Retry = "Retry"
+}
+````
+
+## Paso 3. Crear tema y componentes reutilizables
+
+El tema toma sus colores de `Colors`. `ProductCard` usa dimensiones compartidas. Los estados y el campo de búsqueda reciben callbacks y parámetros, así cada app mantiene el comportamiento mientras reutiliza la presentación.
+
+#### Archivo `designsystem/src/main/java/com/redbull/lab/ui/RedBullTheme.kt`
+
+**Qué hace:** Aplica el esquema compartido de Material 3 usando los tokens de color.
 
 ````kotlin
 package com.redbull.lab.ui
@@ -184,20 +252,21 @@ package com.redbull.lab.ui
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
+import com.redbull.lab.ui.theme.Colors
 
 /** Applies the shared platform color scheme to a consumer screen. */
 @Composable
 fun RedBullTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = lightColorScheme(primary = Color(0xFFCC0000), secondary = Color(0xFF202020)), content = content)
+    MaterialTheme(
+        colorScheme = lightColorScheme(primary = Colors.Primary, secondary = Colors.Secondary),
+        content = content
+    )
 }
 ````
 
-#### Subpaso 8 — Crea o actualiza `designsystem/src/main/java/com/redbull/lab/ui/ProductCard.kt`
+#### Archivo `designsystem/src/main/java/com/redbull/lab/ui/ProductCard.kt`
 
-**En el proyecto de la biblioteca Compose compartida, en la ruta `designsystem/src/main/java/com/redbull/lab/ui/ProductCard.kt`, crea el archivo si no existe y pega el siguiente código.**
-
-**Explicación:** Define la tarjeta reutilizable de producto usada por las aplicaciones.
+**Qué hace:** Muestra título y subtítulo dentro de una tarjeta Compose compartida.
 
 ````kotlin
 package com.redbull.lab.ui
@@ -210,13 +279,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import com.redbull.lab.ui.theme.Dimensions
 
 /** Displays a compact product summary using shared platform spacing and typography. */
 @Composable
 fun ProductCard(title: String, subtitle: String, modifier: Modifier = Modifier) {
-    Card(modifier = modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-        Column(Modifier.padding(16.dp)) {
+    Card(modifier = modifier.fillMaxWidth().padding(vertical = Dimensions.Dim6dp)) {
+        Column(Modifier.padding(Dimensions.Dim16dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium)
             Text(subtitle, style = MaterialTheme.typography.bodyMedium)
         }
@@ -224,11 +293,9 @@ fun ProductCard(title: String, subtitle: String, modifier: Modifier = Modifier) 
 }
 ````
 
-#### Subpaso 9 — Crea o actualiza `designsystem/src/main/java/com/redbull/lab/ui/PlatformComponents.kt`
+#### Archivo `designsystem/src/main/java/com/redbull/lab/ui/PlatformComponents.kt`
 
-**En el proyecto de la biblioteca Compose compartida, en la ruta `designsystem/src/main/java/com/redbull/lab/ui/PlatformComponents.kt`, crea el archivo si no existe y pega el siguiente código.**
-
-**Explicación:** Define componentes Compose reutilizables para búsqueda, carga, error y vacío.
+**Qué hace:** Expone búsqueda, indicador de carga, estado vacío y error con acción de reintento.
 
 ````kotlin
 package com.redbull.lab.ui
@@ -245,7 +312,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import com.redbull.lab.ui.theme.Dimensions
+import com.redbull.lab.ui.theme.Strings
 
 /** A labeled search input shared by consumer applications. */
 @Composable
@@ -253,7 +321,7 @@ fun PlatformSearchField(
     query: String,
     onQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    label: String = "Search",
+    label: String = Strings.Search,
 ) {
     OutlinedTextField(
         value = query,
@@ -268,12 +336,12 @@ fun PlatformSearchField(
 @Composable
 fun PlatformLoadingIndicator(modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier.fillMaxWidth().padding(24.dp),
+        modifier = modifier.fillMaxWidth().padding(Dimensions.Dim24dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(Dimensions.Dim8dp),
     ) {
         CircularProgressIndicator()
-        Text("Loading…", style = MaterialTheme.typography.bodyMedium)
+        Text(Strings.Loading, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -284,7 +352,7 @@ fun PlatformEmptyState(
     message: String? = null,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxWidth().padding(16.dp)) {
+    Column(modifier = modifier.fillMaxWidth().padding(Dimensions.Dim16dp)) {
         Text(title, style = MaterialTheme.typography.titleMedium)
         if (message != null) Text(message, style = MaterialTheme.typography.bodyMedium)
     }
@@ -297,48 +365,41 @@ fun PlatformErrorState(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxWidth().padding(16.dp)) {
+    Column(modifier = modifier.fillMaxWidth().padding(Dimensions.Dim16dp)) {
         Text(message, style = MaterialTheme.typography.bodyMedium)
-        Button(onClick = onRetry, modifier = Modifier.padding(top = 8.dp)) {
-            Text("Retry")
+        Button(onClick = onRetry, modifier = Modifier.padding(top = Dimensions.Dim8dp)) {
+            Text(Strings.Retry)
         }
     }
 }
 ````
 
-**Al terminar este paso:**
+**Compila el AAR debug y release y ejecuta las tareas de prueba disponibles:**
 
 ```bash
-./gradlew :designsystem:assembleDebug
+./gradlew test assembleDebug
 ```
 
-### 3. Compilar, probar y publicar localmente
+Este POC no contiene pruebas unitarias ni pruebas instrumentadas, así que Gradle informa `NO-SOURCE` para esas tareas. La compilación sí valida los componentes Compose.
 
-Compila el AAR release y corre pruebas unitarias (el POC no incluye tests de UI). Publicar en Maven Local permite que Events y Explore resuelvan com.redbull.lab:shared-ui:0.1.0 sin publicar todavía en internet. `groupId`, `artifactId` y la versión local predeterminada se configuran en `LibraryCoordinates`; en CI, la publicación usa la versión del tag `vX.Y.Z`.
+## Paso 4. Publicar localmente y consumir la biblioteca
 
-**Al terminar este paso:**
-
-```bash
-./gradlew test assembleDebug publishToMavenLocal
-```
-
-Comprueba que Maven Local recibió el paquete:
+Publica el artefacto localmente para que las apps de práctica lo resuelvan desde `mavenLocal()`. La versión local predeterminada se lee de `LibraryCoordinates.VERSION_NAME`; se puede sobreescribir con la propiedad `releaseVersion`.
 
 ```bash
+./gradlew publishToMavenLocal
 find ~/.m2/repository/com/redbull/lab/shared-ui -maxdepth 2 -type f
 ```
 
-### 4. Configurar CI y release independiente
+La coordenada actual es `com.redbull.lab:shared-ui:0.1.5`. Las apps consumidoras deben solicitar una versión publicada y tener acceso de lectura al repositorio o paquete correspondiente.
 
-El workflow CI compila en push/PR. Para publicar una versión nueva, integra el cambio en main y crea un tag SemVer vX.Y.Z. El workflow verifica y después publica el artefacto en GitHub Packages de este repo.
+## Paso 5. Configurar CI y publicación de GitHub Packages
 
-**Sigue cada archivo como un subpaso en el orden que aparece. Termina uno antes de continuar al siguiente.**
+El CI valida push y pull request. El workflow de publicación corre al integrar a `main`: lee `VERSION_NAME`, valida SemVer y comprueba que el tag no exista; luego compila, publica el paquete y crea el tag y GitHub Release. Antes del próximo release incrementa `VERSION_NAME` en `LibraryCoordinates.kt` y mergea el cambio en `main`. El token de GitHub Actions se usa desde `GITHUB_TOKEN`; no agregues credenciales al repositorio.
 
-#### Subpaso 10 — Crea o actualiza `.github/workflows/android-ci.yml`
+#### Archivo `.github/workflows/android-ci.yml`
 
-**En el proyecto de la biblioteca Compose compartida, en la ruta `.github/workflows/android-ci.yml`, crea el archivo si no existe y pega el siguiente código.**
-
-**Explicación:** Centraliza versiones y aliases para dependencias y plugins en formato TOML.
+**Qué hace:** Instala JDK 17 y Android SDK 36 y ejecuta la validación automática para pushes y pull requests.
 
 ````yaml
 name: Android CI
@@ -355,27 +416,51 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v4
-      - name: Install Android API 35
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Install Android API 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - uses: gradle/actions/setup-gradle@v4
       - run: ./gradlew test assembleDebug
 ````
 
-#### Subpaso 11 — Crea o actualiza `.github/workflows/publish.yml`
+#### Archivo `.github/workflows/publish.yml`
 
-**En el proyecto de la biblioteca Compose compartida, en la ruta `.github/workflows/publish.yml`, crea el archivo si no existe y pega el siguiente código.**
-
-**Explicación:** Centraliza versiones y aliases para dependencias y plugins en formato TOML.
+**Qué hace:** Verifica, publica la versión del archivo de coordenadas y crea un GitHub Release al integrar en main.
 
 ````yaml
 name: Publish Android library
 on:
   push:
-    tags: ['v*']
+    branches: [main]
 permissions:
   contents: read
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release_needed: ${{ steps.version.outputs.release_needed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Read version and check existing release
+        id: version
+        run: |
+          version=$(sed -nE 's/.*VERSION_NAME = "([^"]+)".*/\1/p' buildSrc/src/main/kotlin/LibraryCoordinates.kt)
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid release version in LibraryCoordinates.kt: $version" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null 2>&1; then
+            echo "Release v$version already exists; skipping duplicate publication."
+            echo "release_needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "release_needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
   verify:
+    needs: prepare
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -383,17 +468,18 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
-      - name: Install Android API 35
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - uses: android-actions/setup-android@v4
+      - name: Install Android API 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - uses: gradle/actions/setup-gradle@v4
       - run: ./gradlew test assembleDebug
 
   publish:
-    needs: verify
+    needs: [prepare, verify]
+    if: needs.prepare.outputs.release_needed == 'true'
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
     steps:
       - uses: actions/checkout@v4
@@ -402,21 +488,25 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v4
-      - name: Install Android API 35
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Install Android API 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - uses: gradle/actions/setup-gradle@v4
-      - name: Publish tagged version
-        run: ./gradlew publishAllPublicationsToGitHubPackagesRepository -PreleaseVersion="${GITHUB_REF_NAME#v}"
+      - name: Publish tagged version to GitHub Packages
+        run: ./gradlew publishAllPublicationsToGitHubPackagesRepository -PreleaseVersion="${{ needs.prepare.outputs.version }}"
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.prepare.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
 ````
 
-#### Subpaso 12 — Crea o actualiza `.gitignore`
+#### Archivo `.gitignore`
 
-**En el proyecto de la biblioteca Compose compartida, en la ruta `.gitignore`, crea el archivo si no existe y pega el siguiente código.**
-
-**Explicación:** Evita versionar salidas de build, cachés y configuración local.
+**Qué hace:** Excluye caches, builds, configuración local y metadatos del IDE.
 
 ````text
 **/.gradle/
@@ -427,56 +517,49 @@ local.properties
 .DS_Store
 ````
 
-#### Subpaso 13 — Crea o actualiza `README.md`
+#### Archivo `README.md`
 
-**En el proyecto de la biblioteca Compose compartida, en la ruta `README.md`, crea el archivo si no existe y pega el siguiente código.**
+**Qué hace:** Resume versiones, comandos, publicación y forma de consumir el artefacto.
 
-**Explicación:** Describe el propósito, uso, coordenadas y publicación de este repositorio.
-
-````text
+````markdown
 # Shared Compose UI library
 
-Design tokens, `RedBullTheme`, `ProductCard` and shared search/loading/empty/error components. This folder is the root of the UI library's own GitHub repository.
+Design tokens, `RedBullTheme`, `ProductCard` and shared search/loading/empty/error components. This folder is the root of the UI library's own GitHub repository. The current implementation keeps colors, dimensions and strings in `theme/Colors.kt`, `theme/Dimensions.kt` and `theme/Strings.kt`; the shared components read those tokens.
 
 ## Local build and publication
 
-Requires JDK 17 and Android SDK 35. From this directory:
+Requires JDK 17 and Android SDK Platform 36. From this directory:
 
 ```bash
 ./gradlew test assembleDebug
 ./gradlew publishToMavenLocal
 ```
 
-The Maven group, artifact, and local default version are configured in `buildSrc/src/main/kotlin/LibraryCoordinates.kt`. A new `vX.Y.Z` tag runs `.github/workflows/publish.yml`, which verifies the library and publishes that tag version to GitHub Packages. Do not republish an existing version.
+The Maven group, artifact and default version are in `buildSrc/src/main/kotlin/LibraryCoordinates.kt`. The current default version is `0.1.5`. The publish workflow runs after changes are integrated into `main`: it reads the version, skips a release tag that already exists, validates and publishes `com.redbull.lab:shared-ui:<version>` to GitHub Packages, then creates the matching GitHub Release. Increment `VERSION_NAME` before the next release.
 
-The workflow publishes into this GitHub repository's Maven package registry. Its `GITHUB_TOKEN` only needs `packages: write`; no personal token is stored in the repo. Consumer repos need `Read` access to this package. See the parent lab's `TUTORIAL.md` for the full four-repo release flow.
+The workflow uses `GITHUB_TOKEN`; no personal token is stored in the repository. Consumer repos need `Read` access to this package. See the parent lab's `TUTORIAL.md` for the full four-repo release flow.
+
+## Build versions
+
+The catalog uses AGP 8.13.2, Kotlin 2.3.21, Compose BOM 2026.06.00 and Gradle 8.13. This is the latest Compose line compatible with the project's API 36 / AGP 8 setup; Compose 1.12 requires compileSdk 37 and AGP 9, which would require a broader build migration.
+
+The POC has no unit or instrumented test sources yet; `test` completes with `NO-SOURCE`, while `assembleDebug` compiles the library. See [PRACTICA_PASO_A_PASO.md](PRACTICA_PASO_A_PASO.md) for the file-by-file guide.
 ````
 
-**Al terminar este paso:**
+## Compilar, publicar y comprobar un release
+
+Desde la raíz de `01-shared-ui-library`, el flujo local completo es:
 
 ```bash
-git tag v0.1.1 && git push origin v0.1.1
-```
-
-## Publicar y conectar con los otros repositorios
-
-Este es un repositorio GitHub independiente. Desde esta carpeta, sube el código a su repositorio. Después de integrar el cambio en `main`, publica una versión nueva con un tag que no se haya usado antes (ejemplo: `v0.1.1`):
-
-```bash
-git add .
-git commit -m "Prepare library release"
-git push origin main
-git tag v0.1.1
-git push origin v0.1.1
-```
-
-El workflow `.github/workflows/publish.yml` ejecuta la validación y publica el paquete de este repo en GitHub Packages. Incrementa la versión Maven antes de reutilizar el proceso. Para consumir un paquete privado, concede permiso de lectura al repo app.
-
-## Comandos útiles desde este proyecto
-
-```bash
-./gradlew --version
 ./gradlew clean
+./gradlew test assembleDebug
+./gradlew publishToMavenLocal
 ```
 
-Si estás en Windows sustituye `./gradlew` por `gradlew.bat`. Si Gradle no encuentra una biblioteca local, publícala primero desde su propio repo y confirma que la versión de la app coincide con la publicada.
+Para GitHub Packages, sube y mergea cambios a `main` después de aumentar la versión en `buildSrc/src/main/kotlin/LibraryCoordinates.kt`. El workflow publica la versión declarada y crea automáticamente `vX.Y.Z` si aún no existe.
+
+## Por qué estas versiones
+
+El código visual y las firmas de los componentes no se cambiaron; la actualización se limitó a versiones de build/dependencias y a los ajustes necesarios para que esa combinación compile. Se fijaron AGP 8.13.2, Gradle 8.13 y Kotlin 2.3.21; el Compose BOM es 2026.06.00, última línea estable anterior al requisito de API 37. Compose 1.12 requiere compileSdk 37 y AGP 9, por lo que adoptarlo aquí exigiría una migración de build mayor.
+
+Fuentes oficiales consultadas el 2026-11-01: [Compose setup y BOM](https://developer.android.com/develop/ui/compose/setup-compose-dependencies-and-compiler), [requisito de Compose 1.12/API 37](https://android-developers.googleblog.com/2026/08/jetpack-compose-august-2026-release.html), [compatibilidad AGP/Gradle](https://developer.android.com/build/releases/about-agp), [historial de Kotlin](https://kotlinlang.org/docs/releases.html).
